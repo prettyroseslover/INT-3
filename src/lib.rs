@@ -5,30 +5,32 @@ use serde::{
     Deserialize,
 };
 
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(tag = "command1", content = "params")]
-enum Commands {
+pub enum Commands {
     CheckLocalFile(CheckLocalFileParams),
     QuarantineLocalFile(QuarantineLocalFileParams),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct CheckLocalFileParams {
-    path: PathBuf,
-    signature: Vec<u8>,
+pub struct CheckLocalFileParams {
+    pub path: PathBuf,
+    pub signature: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct QuarantineLocalFileParams {
-    path: PathBuf
+pub struct QuarantineLocalFileParams {
+    pub path: PathBuf
 }
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_check_local_file() {
+    fn test_parse_check_local_file() {
         let path = "/home/utente";
         let signature = Vec::from([5, 8, 0, 0, 8]);
         let json = format!(r#"
@@ -51,7 +53,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quarantine_local_file() {
+    fn test_parse_quarantine_local_file() {
         let path = "/home/utente";
         let json = format!(r#"
         {{
