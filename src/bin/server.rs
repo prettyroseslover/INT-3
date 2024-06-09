@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     if !(args.quarantine.exists() && args.quarantine.is_dir()) {
         return Err(eyre!(
             "{:?} either doesn't exist or is not a directory",
-            args.quarantine
+            args.quarantine.to_string_lossy()
         ));
     }
 
@@ -63,14 +63,14 @@ fn check_local_file(params: CheckLocalFileParams) -> Result<Json<Value>, (Status
     if !(params.path.exists() && params.path.is_file()) {
         return Err((
             StatusCode::BAD_REQUEST,
-            format!("{:?} either doesn't exist or is not a file", params.path).to_string(),
+            format!("{:?} either doesn't exist or is not a file", params.path.to_string_lossy()).to_string(),
         ));
     };
 
     let haystack: Vec<u8> = fs::read(&params.path).map_err(
         |e|
         (StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Something went wrong while readint to bytes {:?}: {}", params.path, e).to_string()),
+        format!("Something went wrong while readint to bytes {:?}: {}", params.path.to_string_lossy(), e).to_string()),
     )?;
     let ac = AhoCorasick::new(&[params.signature]).map_err(
         |e|
@@ -93,20 +93,20 @@ fn quarantine_local_file(
     if !(params.path.exists() && params.path.is_file()) {
         return Err((
             StatusCode::BAD_REQUEST,
-            format!("{:?} either doesn't exist or is not a file", params.path).to_string(),
+            format!("{} either doesn't exist or is not a file", params.path.to_string_lossy()).to_string(),
         ));
     };
 
     let mut quarantine = quarantine.as_ref().clone();
-    quarantine.set_file_name(params.path.file_name().unwrap());
+    quarantine.push(params.path.file_name().unwrap());
 
-    match fs::rename(&params.path, quarantine) {
+    match fs::rename(&params.path, &quarantine) {
         Ok(_) => Ok(Json(
-            json!({ "message": format!("{:?} was quarantined", params.path) }),
+            json!({ "message": format!("{:?} was quarantined to {:?}", params.path.to_string_lossy(), quarantine) }),
         )),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong while moving {:?}: {}", params.path, e).to_string(),
+            format!("Something went wrong while moving {:?}: {}", params.path.to_string_lossy(), e).to_string(),
         )),
     }
 }
