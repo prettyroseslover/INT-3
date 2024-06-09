@@ -41,7 +41,7 @@ fn main() -> Result<()> {
         .build()
         .unwrap()
         .block_on(async {
-            let app = Router::new().route("/", post(my_handler).with_state(shared_state));
+            let app = Router::new().route("/", post(command_handler).with_state(shared_state));
             let listener = tokio::net::TcpListener::bind(args.address).await.unwrap();
             axum::serve(listener, app).await.unwrap();
         });
@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-async fn my_handler(
+async fn command_handler(
     State(quarantine): State<Arc<PathBuf>>,
     Json(payload): Json<Commands>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
