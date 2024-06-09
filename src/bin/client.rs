@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use reqwest::blocking as rq;
-use serde_json::Value;
+use serde_json::{to_value, Value};
 use std::{io, path::PathBuf};
 use std::io::prelude::*;
 use ptstart_int_3::{CheckLocalFileParams, Commands, QuarantineLocalFileParams};
@@ -44,6 +44,9 @@ fn main() -> Result<()> {
             let mut signature = Vec::new();
             stdin.read_to_end(&mut signature)
                 .map_err(|e| eyre!("Unable to read signature: {}", e))?;
+            if signature.len() > 1024 {
+                return Err(eyre!("Signature must not exceed 1 KiB"));
+            }
             check_local_file(cli.url, remote_path, signature)?;
         },
         Command::QuarantineLocalFile { remote_path } => quarantine_local_file(cli.url, remote_path)?,
@@ -59,22 +62,15 @@ fn check_local_file(url: String, remote_path: PathBuf, signature: Vec<u8>) -> Re
         signature: signature
     });
 
-    let client = rq::Client::new();
-    let response = client.post(url)
-        .json(&json_to_be)
-        .send()
-        .map_err(|e| eyre!("Error making reqwest: {}", e))?;
-
-        match response.status() {
-            StatusCode::OK => {
-                let message = response.json::<Value>()
-                    .map_err(|e| eyre!("Error while decoding json: {}", e))?["offset"]
-                    .as_array().ok_or(eyre!("Not a string!"))?.to_owned();
-                cprintln!("<green>{:?}</green>", message);
-            },
-            _ => cprintln!("<red>Response with status {}: {:?}</red>", response.status(), io::read_to_string(response)
-                .map_err(|e| eyre!("Failed to parse non-OK response: {}", e))?),
-        }
+    match send_reqwest(to_value(json_to_be)?, url) {
+        Ok(value) => {
+            let message = value["offset"].as_array().ok_or(eyre!("Not a string!"))?.to_owned()
+                .into_iter().map(|num| num.as_number().and_then(|n| n.as_u64()))
+                .collect::<Option<Vec<_>>>().ok_or(eyre!("Not a number!"))?;
+            cprintln!("<green>{:?}</green>", message);
+        },
+        Err(e) => cprintln!("<red>{}</red>", e),
+    }
     
     Ok(())
 }
@@ -85,6 +81,18 @@ fn quarantine_local_file(url: String, remote_path: PathBuf) -> Result<()> {
         path: remote_path
     });
 
+    match send_reqwest(to_value(json_to_be)?, url) {
+        Ok(value) => {
+            let message = value["message"].as_str().ok_or(eyre!("Not a string!"))?.to_owned();
+            cprintln!("<green>{}</green>", message);
+        },
+        Err(e) => cprintln!("<red>{}</red>", e),
+    }
+
+    Ok(())
+}
+
+fn send_reqwest(json_to_be: Value, url: String) -> Result<Value>{
     let client = rq::Client::new();
     let response = client.post(url)
         .json(&json_to_be)
@@ -93,14 +101,8 @@ fn quarantine_local_file(url: String, remote_path: PathBuf) -> Result<()> {
 
     match response.status() {
         StatusCode::OK => {
-            let message = response.json::<Value>()
-                .map_err(|e| eyre!("Error while decoding json: {}", e))?["message"]
-                .as_str().ok_or(eyre!("Not a string!"))?.to_owned();
-            cprintln!("<green>{}</green>", message);
+            return response.json::<Value>().map_err(|e| eyre!("Error while decoding json: {}", e))
         },
-        _ => cprintln!("<red>Response with status {}: {:?}</red>", response.status(), io::read_to_string(response)
-            .map_err(|e| eyre!("Failed to parse non-OK response: {}", e))?),
+        _ => return Err(eyre!("Response with status {}: {:?}", response.status(), io::read_to_string(response))),
     }
-
-    Ok(())
 }

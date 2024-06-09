@@ -67,6 +67,10 @@ fn check_local_file(params: CheckLocalFileParams) -> Result<Json<Value>, (Status
         ));
     };
 
+    if params.signature.len() > 1024 {
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Signature must not exceed 1 KiB")));
+    }
+
     let haystack: Vec<u8> = fs::read(&params.path).map_err(
         |e|
         (StatusCode::INTERNAL_SERVER_ERROR,
