@@ -1,3 +1,4 @@
+use aho_corasick::AhoCorasick;
 use axum::{
     extract::{Json, State},
     http::StatusCode,
@@ -9,6 +10,7 @@ use eyre::{eyre, Result};
 use ptstart_int_3::{CheckLocalFileParams, Commands, QuarantineLocalFileParams};
 use serde_json::{json, Value};
 use std::{fs, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::io::{self, Write};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -65,7 +67,24 @@ fn check_local_file(params: CheckLocalFileParams) -> Result<Json<Value>, (Status
             format!("{:?} either doesn't exist or is not a file", params.path).to_string(),
         ));
     };
-    Ok(Json(json!({ "payload": "result" }))) // change
+
+    let haystack: Vec<u8> = fs::read(&params.path).map_err(
+        |e|
+        (StatusCode::INTERNAL_SERVER_ERROR,
+        format!("Something went wrong while readint to bytes {:?}: {}", params.path, e).to_string()),
+    )?;
+    let ac = AhoCorasick::new(&[params.signature]).map_err(
+        |e|
+        (StatusCode::INTERNAL_SERVER_ERROR,
+        format!("Something went wrong while building AhoCorasick: {}", e).to_string()),
+    )?;
+
+    let matches = ac
+        .find_iter(&haystack)
+        .map(|mat| mat.start())
+        .collect::<Vec<usize>>();
+
+    Ok(Json(json!({ "offset": matches })))
 }
 
 fn quarantine_local_file(
@@ -93,11 +112,29 @@ fn quarantine_local_file(
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use tempfile;
+
+    #[test]
+    fn test_check_local_file_two_offsets() {
+        let dir = tempfile::tempdir().unwrap();
+        let temp_path = dir.path().join("test.txt");
+        let mut file = fs::File::create(&temp_path).unwrap();
+        writeln!(file, "pallina").unwrap();
+
+        let params = CheckLocalFileParams {
+            path: PathBuf::from(temp_path),
+            signature: Vec::from([108, 108])
+        };
+
+        let got = check_local_file(params).unwrap().0;
+        let result: Vec<usize> = Vec::from([2]);
+        let expected = json!({ "offset": result });
+
+        assert_eq!(got, expected);
+    }
 
     #[test]
     fn test_quarantine_local_file() {
@@ -107,7 +144,7 @@ mod tests {
         fs::File::create(&temp_path).unwrap();
         let quarantine = Arc::new(PathBuf::from(temp_quarantine.path()));
         let params = QuarantineLocalFileParams {
-            path: PathBuf::from(&temp_path)
+            path: PathBuf::from(&temp_path),
         };
 
         let got = quarantine_local_file(params, quarantine).unwrap().0;
@@ -115,5 +152,4 @@ mod tests {
 
         assert_eq!(got, expected);
     }
-
 }
