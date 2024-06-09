@@ -10,7 +10,6 @@ use eyre::{eyre, Result};
 use ptstart_int_3::{CheckLocalFileParams, Commands, QuarantineLocalFileParams};
 use serde_json::{json, Value};
 use std::{fs, net::SocketAddr, path::PathBuf, sync::Arc};
-use std::io::{self, Write};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -116,13 +115,14 @@ fn quarantine_local_file(
 mod tests {
     use super::*;
     use tempfile;
+    use std::io::Write;
 
     #[test]
     fn test_check_local_file_two_offsets() {
         let dir = tempfile::tempdir().unwrap();
         let temp_path = dir.path().join("test.txt");
         let mut file = fs::File::create(&temp_path).unwrap();
-        writeln!(file, "pallina").unwrap();
+        writeln!(&mut file, "pallina").unwrap();
 
         let params = CheckLocalFileParams {
             path: PathBuf::from(temp_path),
