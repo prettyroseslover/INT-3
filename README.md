@@ -46,3 +46,44 @@ Options:
   -u, --url <URL>  server address [default: http://127.0.0.1:3000/]
   -h, --help       Print help
 ```
+
+## Bonus: Python-клиент
+> Дополнительный клиент, реализованный на Python
+
+После просмотра вводного интенсива, где раскрывались особенности команды, я обратила внимание на то, что ваша команда использует Python для простоты и быстроты реализации бизнес-логики и тестирования, а в моментах, где производительности Python не достаточно - Rust. Это натолкнуло меня на идею не просто реализовать Rust клиент-сервер, но и попробовать создать дополнительный клиент на Python, чтобы он интегрировался (и переиспользовал) часть логики, уже реализованной на Rust. Для поддержания единой точки контракта я переиспользую `lib.rs`, а точнее сериализацию json'а. Такая интеграция Rust-кода в Python-код реализована через библиотеку [PyO3](https://pyo3.rs/v0.21.2/). Кроме того, такой выбор языков для клиента и сервера отражает типичные требования производительности подобного ПО.
+
+### Подготовка среды и использование
+
+Для менеджмента зависимостей использую [Poetry](https://python-poetry.org/), поскольку он не только является соверменным и удобным инструментом для Python-разработки, но и интеграируется с [maturin](https://www.maturin.rs/), который используется для интеграции с Rust. Перед первым запуском необходимо подготовить среду:
+```bash
+poetry install
+poetry run maturin develop # сборка модуля Rust
+```
+
+Опции Python-клиента подобны клиенту, реализованному через Rust. Пример: 
+
+```bash
+$ poetry run python py-client/py-client.py --help
+
+usage: py-client.py [-h] [-u URL] {check-local-file,quarantine-local-file} ...
+
+Single-threaded Python client
+
+positional arguments:
+  {check-local-file,quarantine-local-file}
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     URL of the server. Default http://127.0.0.1:3000
+```
+
+Таким образом, после запуска сервера и удачной сборки Python-клиента им можно пользоваться:
+```bash
+# CheckLocalFileParams
+poetry run python py-client/py-client.py check-local-file -r [путь/к/файлу] < [файл/с/сигнатурой]
+# ИЛИ
+echo -n -e '\x[сигнатура]' | poetry run python py-client/py-client.py check-local-file -r [путь/к/файлу]
+
+# QuarantineLocalFile
+poetry run python py-client/py-client.py quarantine-local-file -r [путь/к/файлу]
+```

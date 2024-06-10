@@ -1,5 +1,5 @@
+use pyo3::prelude::*;
 use std::path::PathBuf;
-
 use serde::{
     Serialize,
     Deserialize,
@@ -24,6 +24,34 @@ pub struct QuarantineLocalFileParams {
     pub path: PathBuf
 }
 
+#[pyfunction]
+fn serialize_check(path: &str, signature: Vec<u8>) -> PyResult<String> {
+    let json_to_be: Commands = Commands::CheckLocalFile(
+        CheckLocalFileParams {
+        path: PathBuf::from(path),
+        signature: signature
+    });
+    let result = serde_json::to_string(&json_to_be).unwrap();
+    Ok(result)
+}
+
+#[pyfunction]
+fn serialize_quarantine(path: &str) -> PyResult<String> {
+    let json_to_be: Commands = Commands::QuarantineLocalFile(
+        QuarantineLocalFileParams {
+        path: PathBuf::from(path)
+    });
+    let result = serde_json::to_string(&json_to_be).unwrap();
+    Ok(result)
+}
+
+#[pymodule]
+#[pyo3(name="ptstart_int_3")]
+fn python_export(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(serialize_check, m)?)?;
+    m.add_function(wrap_pyfunction!(serialize_quarantine, m)?)?;
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {

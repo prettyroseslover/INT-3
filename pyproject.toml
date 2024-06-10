@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "py-client"
+version = "0.1.0"
+description = ""
+authors = ["prettyroseslover <potapova.polia2002@yandex.ru>"]
+readme = "README.md"
+package-mode = false
+
+[tool.maturin]
+
+
+[tool.poetry.dependencies]
+python = "^3.12"
+argparse = "^1.4.0"
+requests = "^2.32.3"
+maturin = "^1.6.0"
+
+
+[build-system]
+# requires = ["poetry-core"]
+# build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
