@@ -47,6 +47,30 @@ Options:
   -h, --help       Print help
 ```
 
+### Запуск unit-тестов
+```bash
+$ cargo test -q
+
+running 2 tests
+..
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+..
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
 ## Bonus: Python-клиент
 > Дополнительный клиент, реализованный на Python
 
@@ -86,4 +110,11 @@ echo -n -e '\x[сигнатура]' | poetry run python py-client/py-client.py c
 
 # QuarantineLocalFile
 poetry run python py-client/py-client.py quarantine-local-file -r [путь/к/файлу]
+```
+
+### Запуск unit-тестов
+```bash
+$ poetry run pytest py-client/test.py -q
+.. [100%]                                                                                                                                                                                                                                    
+2 passed in 0.01s
 ```

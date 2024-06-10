@@ -106,7 +106,7 @@ fn quarantine_local_file(
 
     match fs::rename(&params.path, &quarantine) {
         Ok(_) => Ok(Json(
-            json!({ "message": format!("{:?} was quarantined to {:?}", params.path.to_string_lossy(), quarantine) }),
+            json!({ "message": format!("{:?} was quarantined", params.path.to_string_lossy()) }),
         )),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
